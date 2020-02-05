@@ -1,4 +1,5 @@
-process.env.APP_PATH = __dirname
+const path = require('path')
+process.env.APP_PATH = path.resolve(__dirname, 'node_modules/@glueit/learn-back/')
 
 const sqsQueue = require('./handlers/sqsQueue')
 const storeConfig = require('@glueit/back/src/storeConfig')
