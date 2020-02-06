@@ -1,7 +1,6 @@
 const path = require('path')
 process.env.APP_PATH = path.resolve(__dirname, 'node_modules/@glueit/learn-back/')
 
-const sqsQueue = require('./handlers/sqsQueue')
 const storeConfig = require('@glueit/back/src/storeConfig')
 const storeInit = require('@glueit/back/src/storeInit')
 const store = require('@glueit/back/src/store')
@@ -43,7 +42,6 @@ const replaceTokens = ({ string, tokens }) => {
       tokens[name]
     )
   }
-  console.log(replacementStr)
   return replacementStr
 }
 
@@ -59,7 +57,7 @@ exports.handler = async event => {
   if (event.Records) {
     messages = event.Records
   } else {
-    messages = await sqsQueue.get({ queueName: event.queueName })
+    messages = await store.get({ storeName: 'cardEditQueue', query: {} })
   }
   if (Array.isArray(messages)) {
     for (let i in messages) {

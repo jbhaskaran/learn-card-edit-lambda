@@ -8,7 +8,7 @@
     "deploy": "NODE_ENV=production learn-infrastructure learn-card-edit-lambda"
   },
   "dependencies": {
-    "@glueit/learn-back": "0.0.1",
+    "@glueit/learn-back": "0.0.2",
     "@glueit/learn-infrastructure": "0.0.5"
   }
 }
