@@ -48,6 +48,7 @@ const replaceTokens = ({ string, tokens }) => {
 exports.handler = async event => {
   const storeName = 'primary'
   const dynamoStoreName = 'cardsBy'
+  let isLocal = false
   if (!storeAdapter) {
     const config = await storeConfig(storeName)
     storeAdapter = storeInit(config)
@@ -57,6 +58,7 @@ exports.handler = async event => {
   if (event.Records) {
     messages = event.Records
   } else {
+    isLocal = true
     messages = await store.get({ storeName: 'cardEditQueue', query: {} })
   }
   if (Array.isArray(messages)) {
@@ -135,6 +137,14 @@ exports.handler = async event => {
           }
         }
       }
+      if (isLocal) {
+        const object = {
+          receiptHandle: message.ReceiptHandle
+        }
+        await store.delete({ storeName: 'cardEditQueue', object })
+      }
     }
   }
 }
+
+exports.handler({})
