@@ -1,0 +1,217 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "",
+  "Parameters": {
+    "S3Key": {
+      "Type": "String",
+      "Default": ""
+    }
+  },
+	"Resources": {
+		"LambdaExecutionRole": {
+			"Type": "AWS::IAM::Role",
+			"Properties": {
+				"AssumeRolePolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": {
+						"Effect": "Allow",
+						"Principal": {
+							"Service": "lambda.amazonaws.com"
+						},
+						"Action": "sts:AssumeRole"
+					}
+				},
+				"Path": "/",
+				"Policies": [
+					{
+						"PolicyName": "root",
+						"PolicyDocument": {
+							"Version": "2012-10-17",
+							"Statement": [
+								{
+									"Effect": "Allow",
+									"Action": [
+										"logs:CreateLogGroup",
+										"logs:CreateLogStream",
+										"logs:PutLogEvents"
+									],
+									"Resource": "arn:aws:logs:*:*:*"
+								}
+							]
+						}
+					},
+					{
+						"PolicyName": "allowSes",
+						"PolicyDocument": {
+							"Version": "2012-10-17",
+							"Statement": [
+								{
+									"Effect": "Allow",
+									"Action": [
+										"ses:SendEmail",
+										"ses:SendTemplatedEmail",
+										"ses:SendRawEmail",
+										"ses:SendBulkTemplatedEmail"
+									],
+									"Resource": "arn:aws:ses:*:*:*"
+								}
+							]
+						}
+					},
+					{
+						"PolicyName": "allowSqs",
+						"PolicyDocument": {
+							"Version": "2012-10-17",
+							"Statement": [
+								{
+									"Effect": "Allow",
+									"Action": [
+										"sqs:SendMessage",
+										"sqs:ReceiveMessage",
+										"sqs:DeleteMessage",
+										"sqs:GetQueueAttributes",
+										"sqs:ChangeMessageVisibility"
+									],
+									"Resource": "arn:aws:sqs:*:*:*"
+								}
+							]
+						}
+					},
+					{
+						"PolicyName": "allowVpc",
+						"PolicyDocument": {
+							"Version": "2012-10-17",
+							"Statement": [
+								{
+									"Effect": "Allow",
+									"Action": [
+										"ec2:CreateNetworkInterface",
+										"ec2:DescribeNetworkInterfaces",
+										"ec2:DetachNetworkInterface",
+										"ec2:DeleteNetworkInterface"
+									],
+									"Resource": "*"
+								}
+							]
+						}
+					},
+					{
+						"PolicyName": "allowSecretsDB",
+						"PolicyDocument": {
+							"Version": "2012-10-17",
+							"Statement": [
+								{
+									"Effect": "Allow",
+									"Action": [
+										"secretsmanager:GetSecretValue"
+									],
+									"Resource": {
+										"Fn::ImportValue": {
+											"Fn::Sub": "InfraExports-DBSecretArn"
+										}
+									}
+								}
+							]
+						}
+					},
+					{
+						"PolicyName": "allowDynamoDB",
+						"PolicyDocument": {
+							"Version": "2012-10-17",
+							"Statement": [
+								{
+									"Effect": "Allow",
+									"Action": [
+										"dynamodb:PutItem",
+										"dynamodb:updateItem",
+										"dynamodb:DeleteItem",
+										"dynamodb:query"
+									],
+									"Resource": "*"
+								}
+							]
+						}
+					}
+				]
+			}
+		},
+		"CardEditLambda": {
+			"Type": "AWS::Lambda::Function",
+			"Properties": {
+				"FunctionName": "CardEditLambda",
+				"Environment": {
+					"Variables": {
+						"CONFIG_NAME": "production",
+						"sqsName": {
+							"Fn::GetAtt": [
+								"CardEditQueue",
+								"Arn"
+							]
+						}
+					}
+				},
+				"Handler": "index.handler",
+				"Role": {
+					"Fn::GetAtt": [
+						"LambdaExecutionRole",
+						"Arn"
+					]
+				},
+				"VpcConfig": {
+					"SecurityGroupIds": [
+						{
+							"Fn::ImportValue": {
+								"Fn::Sub": "InfraExports-DefaultSecurityGroup"
+							}
+						}
+					],
+					"SubnetIds": [
+						{
+							"Fn::ImportValue": {
+								"Fn::Sub": "InfraExports-PrivateSubnetAId"
+							}
+						},
+						{
+							"Fn::ImportValue": {
+								"Fn::Sub": "InfraExports-PrivateSubnetBId"
+							}
+						}
+					]
+				},
+				"Code": {
+					"S3Bucket": {
+						"Fn::ImportValue": {
+							"Fn::Sub": "InfraExports-LambdaBucketName"
+						}
+					},
+					"S3Key": { "Ref": "S3Key" }
+				},
+				"Runtime": "nodejs12.x",
+				"Timeout": 10
+			}
+		},
+		"CardEditQueue": {
+			"Type": "AWS::SQS::Queue",
+			"Properties": {
+				"QueueName": "CardEditQueue"
+			}
+		},
+		"ToCardEdit": {
+			"Type": "AWS::Lambda::EventSourceMapping",
+			"Properties": {
+				"EventSourceArn": {
+					"Fn::GetAtt": [
+						"CardEditQueue",
+						"Arn"
+					]
+				},
+				"FunctionName": {
+					"Fn::GetAtt": [
+						"CardEditLambda",
+						"Arn"
+					]
+				}
+			}
+		}
+	}
+}
