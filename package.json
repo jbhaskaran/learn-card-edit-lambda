@@ -1,5 +1,5 @@
 {
-  "name": "@glueit/cardEditLambda",
+  "name": "@glueit/card-edit-lambda",
   "description": "Glue It - Process SQS entries for card PUT and POST and place into DynamoDB.",
   "private": true,
   "author": "Jeff Decker",
