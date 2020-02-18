@@ -2,9 +2,13 @@
 	"AWSTemplateFormatVersion": "2010-09-09",
 	"Description": "",
   "Parameters": {
+    "S3Bucket": {
+      "Type": "String",
+      "Default": ""
+    },
     "S3Key": {
       "Type": "String",
-      "Default": "GlueIt-LearnCardEditLambda.zip"
+      "Default": ""
     }
   },
 	"Resources": {
@@ -179,11 +183,7 @@
 					]
 				},
 				"Code": {
-					"S3Bucket": {
-						"Fn::ImportValue": {
-							"Fn::Sub": "InfraExports-LambdaBucketName"
-						}
-					},
+					"S3Bucket":  { "Ref": "S3Bucket" },
 					"S3Key": { "Ref": "S3Key" }
 				},
 				"Runtime": "nodejs12.x",
