@@ -9,9 +9,12 @@
     "lint-prettier": "eslint . --fix && pretty-quick --staged && ncu -u '/^@glueit/' -e 2"
   },
   "dependencies": {
-    "@glueit/learn-back": "0.0.38",
+    "@glueit/learn-back": "0.0.38"
+  },
+  "devDependecies": {
     "@glueit/eslint-config": "0.0.3",
-    "@glueit/prettier-config": "0.0.2"
+    "@glueit/prettier-config": "0.0.2",
+    "husky": "^4.2.3"
   },
   "eslintConfig": {
     "extends": "@glueit/eslint-config"
