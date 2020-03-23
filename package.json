@@ -11,7 +11,7 @@
   "dependencies": {
     "@glueit/learn-back": "0.0.38"
   },
-  "devDependecies": {
+  "devDependencies": {
     "@glueit/eslint-config": "0.0.3",
     "@glueit/prettier-config": "0.0.2",
     "husky": "^4.2.3"
