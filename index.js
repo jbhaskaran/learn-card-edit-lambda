@@ -1,5 +1,8 @@
 const path = require('path')
-process.env.APP_PATH = path.resolve(__dirname, 'node_modules/@glueit/learn-back/')
+process.env.APP_PATH = path.resolve(
+  __dirname,
+  'node_modules/@glueit/learn-back/'
+)
 
 const storeConfig = require('@glueit/back/src/storeConfig')
 const storeInit = require('@glueit/back/src/storeInit')
@@ -81,25 +84,34 @@ exports.handler = async event => {
         const deleteObject = {
           sortKey: null
         }
+        const tokens = {
+          levelName: deleteData.level,
+          updatedTime: deleteData.prevUpdatedTime,
+          component: deleteData.component,
+          userId: deleteData.userId
+        }
 
+        const deleteEntry = async ({ tagName, entry }) => {
+          if (tagName) {
+            tokens.tagName = tagName.toLowerCase()
+          }
+          deleteObject.sortKey = replaceTokens({ string: entry.sk, tokens })
+          await store.delete({
+            storeName: dynamoStoreName,
+            name,
+            id: replaceTokens({ string: entry.pk, tokens }),
+            idName: 'partitionKey',
+            object: deleteObject
+          })
+          delete tokens.tagName
+        }
         for (let entry of entryMap) {
-          for (let tagName of deleteData.tags) {
-            const tokens = {
-              tagName: tagName.toLowerCase(),
-              levelName: deleteData.level,
-              updatedTime: deleteData.prevUpdatedTime,
-              component: deleteData.component,
-              userId: deleteData.userId
+          if (/@tag/.test(entry)) {
+            for (let tagName of deleteData.tags) {
+              await deleteEntry({ tagName, tokens, entry })
             }
-
-            deleteObject.sortKey = replaceTokens({ string: entry.sk, tokens })
-            await store.delete({
-              storeName: dynamoStoreName,
-              name,
-              id: replaceTokens({ string: entry.pk, tokens }),
-              idName: 'partitionKey',
-              object: deleteObject
-            })
+          } else {
+            await deleteEntry({ tokens, entry })
           }
         }
       }
@@ -115,25 +127,35 @@ exports.handler = async event => {
           component: card.component,
           cardLevel: card.level
         }
+        const tokens = {
+          levelName: card.level,
+          updatedTime: card.meta.updatedTime,
+          component: card.component,
+          userId: card.userId
+        }
 
+        const insertEntry = async ({ tagName, entry }) => {
+          if (tagName) {
+            tokens.tagName = tagName.toLowerCase()
+          }
+          cardsByObject.sortKey = replaceTokens({ string: entry.sk, tokens })
+
+          await store.update({
+            storeName: dynamoStoreName,
+            name,
+            id: replaceTokens({ string: entry.pk, tokens }),
+            idName: 'partitionKey',
+            object: cardsByObject
+          })
+          delete tokens.tagName
+        }
         for (let entry of entryMap) {
-          for (let tagName of tags) {
-            const tokens = {
-              tagName: tagName.toLowerCase(),
-              levelName: card.level,
-              updatedTime: card.meta.updatedTime,
-              component: card.component,
-              userId: card.userId
+          if (/@tag/.test(entry)) {
+            for (let tagName of tags) {
+              await insertEntry({ tagName, entry })
             }
-            cardsByObject.sortKey = replaceTokens({ string: entry.sk, tokens })
-
-            await store.update({
-              storeName: dynamoStoreName,
-              name,
-              id: replaceTokens({ string: entry.pk, tokens }),
-              idName: 'partitionKey',
-              object: cardsByObject
-            })
+          } else {
+            await insertEntry({ entry })
           }
         }
       }
