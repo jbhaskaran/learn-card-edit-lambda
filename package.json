@@ -9,7 +9,8 @@
     "lint-prettier": "eslint . --fix && pretty-quick --staged && ncu -u '/^@glueit/' -e 2"
   },
   "dependencies": {
-    "@glueit/learn-back": "0.0.38"
+    "@glueit/learn-back": "0.0.39",
+    "image-thumbnail": "^1.0.8"
   },
   "devDependencies": {
     "@glueit/eslint-config": "0.0.3",

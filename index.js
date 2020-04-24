@@ -1,3 +1,108 @@
+const S3 = require('aws-sdk/clients/s3')
+const s3 = new S3({
+  signatureVersion: 'v4'
+})
+
+/*const AWS = require('aws-sdk')
+const s3 = new AWS.S3({
+  signatureVersion: 'v4',
+  region: 'us-west-2',
+  credentials: new AWS.SharedIniFileCredentials({ profile: 'mfa' })
+})*/
+
+const BUCKET = 'onstartgo.com'
+const BUCKET_PREFIX = 'https://s3.us-west-2.amazonaws.com/onstartgo.com/'
+
+const imageDimensions = require('image-size')
+const sharp = require('sharp')
+const https = require('https')
+
+const getImageUrl = card => {
+  if (card.component === 'Image') {
+    return card.meta.url || false
+  } else {
+    return card.meta.imageUrl || false
+  }
+}
+
+const calcHeight = (newWidth, currentDimensions) => {
+  return parseInt(
+    (currentDimensions.height * (newWidth / currentDimensions.width)).toFixed(0)
+  )
+}
+
+const resize = ({ imageBuffer, dimensions, width = 256 }) => {
+  const jpegOptions = false
+  return new Promise((resolve, reject) => {
+    sharp(imageBuffer)
+      .resize({
+        width,
+        height: calcHeight(width, dimensions),
+        withoutEnlargement: true
+      })
+      .jpeg(jpegOptions ? jpegOptions : { force: false })
+      .toBuffer((err, data, info) => {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
+        }
+      })
+  })
+}
+
+const sizeAndUploadImages = async card => {
+  const imageUrl = getImageUrl(card)
+  if (!imageUrl) {
+    return {}
+  }
+  const keyName = imageUrl.replace(BUCKET_PREFIX, '')
+  const imageData = await new Promise((resolve, reject) => {
+    https.get(imageUrl, res => {
+      let rawData = []
+      res.on('data', chunk => {
+        rawData.push(chunk)
+      })
+      res.on('end', async () => {
+        try {
+          const imageBuffer = Buffer.concat(rawData)
+          const dimensions = imageDimensions(imageBuffer)
+          const widths = [1024, 512, 256, 128]
+          const imageWidths = [dimensions.width]
+          for (let index in widths) {
+            const width = widths[index]
+            if (width <= dimensions.width) {
+              const data = await resize({ imageBuffer, dimensions, width })
+              imageWidths.push(width)
+              const params = {
+                Body: data,
+                Bucket: BUCKET,
+                Key: `${keyName}-${width}`
+              }
+              await new Promise((resolve, reject) => {
+                s3.putObject(params, function(err, data) {
+                  if (err) {
+                    console.log(err, err.stack)
+                    reject(err)
+                  } else {
+                    resolve(data)
+                  }
+                })
+              })
+            }
+          }
+          resolve({ url: imageUrl, widths: imageWidths })
+        } catch (e) {
+          console.log(e)
+          reject(e)
+        }
+      })
+    })
+  })
+  console.log(imageData)
+  return imageData
+}
+
 const path = require('path')
 process.env.APP_PATH = path.resolve(
   __dirname,
@@ -116,6 +221,8 @@ exports.handler = async event => {
         }
       }
 
+      const imageData = await sizeAndUploadImages(card)
+
       const tags = card.tags
       if (card.meta.updatedTime === updatedTime) {
         const cardsByObject = {
@@ -125,7 +232,8 @@ exports.handler = async event => {
           cardName: card.name,
           tags: JSON.stringify(card.tags),
           component: card.component,
-          cardLevel: card.level
+          cardLevel: card.level,
+          imageData: JSON.stringify(imageData)
         }
         const tokens = {
           levelName: card.level,
@@ -168,3 +276,5 @@ exports.handler = async event => {
     }
   }
 }
+
+exports.handler({})
