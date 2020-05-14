@@ -116,6 +116,7 @@ const store = require('@glueit/back/src/store')
 let storeAdapter = null
 
 const entryMap = [
+  { pk: '@latest', sk: '@updatedTime-%updatedTime%' },
   { pk: '@tag', sk: '%tagName%' },
   { pk: '@tag-%tagName%', sk: '@updatedTime-%updatedTime%' },
   { pk: '@tag-%tagName%-@level-%levelName%', sk: '@updatedTime-%updatedTime%' },
@@ -138,8 +139,7 @@ const entryMap = [
     sk: '@updatedTime-%updatedTime%'
   },
   { pk: '@user-%userId%', sk: '@updatedTime-%updatedTime%' },
-  { pk: '@type-%component%', sk: '@updatedTime-%updatedTime%' },
-  { pk: '@latest', sk: '@updatedTime-%updatedTime%' }
+  { pk: '@type-%component%', sk: '@updatedTime-%updatedTime%' }
 ]
 
 const replaceTokens = ({ string, tokens }) => {
@@ -184,42 +184,6 @@ exports.handler = async event => {
         idName: 'id',
         query: {}
       })
-
-      if (deleteData !== false) {
-        const deleteObject = {
-          sortKey: null
-        }
-        const tokens = {
-          levelName: deleteData.level,
-          updatedTime: deleteData.prevUpdatedTime,
-          component: deleteData.component,
-          userId: deleteData.userId
-        }
-
-        const deleteEntry = async ({ tagName, entry }) => {
-          if (tagName) {
-            tokens.tagName = tagName.toLowerCase()
-          }
-          deleteObject.sortKey = replaceTokens({ string: entry.sk, tokens })
-          await store.delete({
-            storeName: dynamoStoreName,
-            name,
-            id: replaceTokens({ string: entry.pk, tokens }),
-            idName: 'partitionKey',
-            object: deleteObject
-          })
-          delete tokens.tagName
-        }
-        for (let entry of entryMap) {
-          if (/@tag/.test(entry)) {
-            for (let tagName of deleteData.tags) {
-              await deleteEntry({ tagName, tokens, entry })
-            }
-          } else {
-            await deleteEntry({ tokens, entry })
-          }
-        }
-      }
 
       const imageData = await sizeAndUploadImages(card)
 
@@ -267,6 +231,43 @@ exports.handler = async event => {
           }
         }
       }
+
+      if (deleteData !== false) {
+        const deleteObject = {
+          sortKey: null
+        }
+        const tokens = {
+          levelName: deleteData.level,
+          updatedTime: deleteData.prevUpdatedTime,
+          component: deleteData.component,
+          userId: deleteData.userId
+        }
+
+        const deleteEntry = async ({ tagName, entry }) => {
+          if (tagName) {
+            tokens.tagName = tagName.toLowerCase()
+          }
+          deleteObject.sortKey = replaceTokens({ string: entry.sk, tokens })
+          await store.delete({
+            storeName: dynamoStoreName,
+            name,
+            id: replaceTokens({ string: entry.pk, tokens }),
+            idName: 'partitionKey',
+            object: deleteObject
+          })
+          delete tokens.tagName
+        }
+        for (let entry of entryMap) {
+          if (/@tag/.test(entry)) {
+            for (let tagName of deleteData.tags) {
+              await deleteEntry({ tagName, tokens, entry })
+            }
+          } else {
+            await deleteEntry({ tokens, entry })
+          }
+        }
+      }
+
       if (isLocal) {
         const object = {
           receiptHandle: message.ReceiptHandle
