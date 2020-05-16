@@ -272,3 +272,5 @@ exports.handler = async event => {
     }
   }
 }
+
+exports.handler({})
