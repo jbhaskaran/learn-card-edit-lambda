@@ -116,30 +116,24 @@ const store = require('@glueit/back/src/store')
 let storeAdapter = null
 
 const entryMap = [
-  { pk: '@latest', sk: '@updatedTime-%updatedTime%' },
-  { pk: '@tag', sk: '%tagName%' },
-  { pk: '@tag-%tagName%', sk: '@updatedTime-%updatedTime%' },
-  { pk: '@tag-%tagName%-@level-%levelName%', sk: '@updatedTime-%updatedTime%' },
-  { pk: '@tag-%tagName%-@type-%component%', sk: '@updatedTime-%updatedTime%' },
+  // latest by user
+  { pk: '@user-%userId%', sk: '@updatedTime-%updatedTime%-@cardId-%cardId%' },
+  // latest global
+  { pk: '@latest', sk: '@updatedTime-%updatedTime%-@cardId-%cardId%' },
+  // latest global AND type
   {
-    pk: '@tag-%tagName%-@type-%component%-@level-%levelName%',
-    sk: '@updatedTime-%updatedTime%'
+    pk: '@latest-@type-%component%',
+    sk: '@updatedTime-%updatedTime%-@cardId-%cardId%'
   },
-  { pk: '@user-%userId%-@tag-%tagName%', sk: '@updatedTime-%updatedTime%' },
+  // latest user AND type
   {
-    pk: '@user-%userId%-@tag-%tagName%-@level-%levelName%',
-    sk: '@updatedTime-%updatedTime%'
-  },
-  {
-    pk: '@user-%userId%-@tag-%tagName%-@type-%component%',
-    sk: '@updatedTime-%updatedTime%'
-  },
-  {
-    pk: '@user-%userId%-@tag-%tagName%-@type-%component%-@level-%levelName%',
-    sk: '@updatedTime-%updatedTime%'
-  },
-  { pk: '@user-%userId%', sk: '@updatedTime-%updatedTime%' },
-  { pk: '@type-%component%', sk: '@updatedTime-%updatedTime%' }
+    pk: '@user-%userId%-@type-%component%',
+    sk: '@updatedTime-%updatedTime%-@cardId-%cardId%'
+  }
+  //{ pk: '@share-%cardId%-@user-%userId%', sk: '@updatedTime-%updatedTime%-@cardId-%cardId%' },
+  //{ pk: '@share-%cardId%-@user-%userId%-@type-%component%', sk: '@updatedTime-%updatedTime%-@cardId-%cardId%' },
+  //{ pk: '@share-%cardId%-@group-%groupId%', sk: '@updatedTime-%updatedTime%-@cardId-%cardId%' },
+  //{ pk: '@share-%cardId%-@group-%groupId%-@type-%component%', sk: '@updatedTime-%updatedTime%-@cardId-%cardId%' }
 ]
 
 const replaceTokens = ({ string, tokens }) => {
@@ -203,7 +197,8 @@ exports.handler = async event => {
           levelName: card.level,
           updatedTime: card.meta.updatedTime,
           component: card.component,
-          userId: card.userId
+          userId: card.userId,
+          cardId: card.id
         }
 
         const insertEntry = async ({ tagName, entry }) => {
